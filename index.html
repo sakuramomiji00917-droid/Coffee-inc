@@ -668,6 +668,26 @@
                 grid-template-columns: 1fr !important;
             }
         }
+        /* スマホでコンテンツがボタンに隠れないように余白を追加 */
+    .content-area {
+        padding-bottom: 120px !important;
+    }
+
+    /* スマホ用：画面下部のボタンエリアを整理 */
+    @media (max-width: 768px) {
+        .sidebar-actions {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: rgba(17, 24, 39, 0.9);
+            z-index: 1000;
+        }
+        .btn-next-turn {
+            width: 100% !important;
+        }
+    }
     </style>
 </head>
 
@@ -2587,4 +2607,5 @@
 </body>
 
 </html
+
 
