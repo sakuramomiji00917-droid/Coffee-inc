@@ -1728,99 +1728,116 @@
             if (typeof showMarketAlert === 'function') showMarketAlert(`🎉 IPO達成！`, p.name, `${p.name} が上場しました。初値は ¥${p.stockPrice.toLocaleString()}。`, 'success');
             renderPortfolio(); updateDashboard();
         };
+        // 役員候補のデータをセット（スクリプトの最初の方に貼り付け）
+        window.execPool = [
+            { id: "e1", icon: "👨‍💼", role: "COO", name: "田中 太郎", level: 1, signCost: 5000000, salary: 500000, desc: "店舗の運営効率を上げ、利益率を改善します。" },
+            { id: "e2", icon: "👩‍💼", role: "CMO", name: "佐藤 花子", level: 1, signCost: 4000000, salary: 400000, desc: "マーケティング効果を底上げし、集客力を高めます。" },
+            { id: "e3", icon: "🧑‍🔬", role: "CTO", name: "鈴木 一郎", level: 2, signCost: 8000000, salary: 800000, desc: "商品開発やテクノロジー導入のコストを下げます。" }
+        ];
 
         // ==========================================
         // 🏢 タブ④：本社・開発 ＆ 人事システム
         // ==========================================
+        // updateHQView の冒頭部分をこう書き換えてください
         window.updateHQView = function () {
             let container = document.getElementById('view-hq');
             if (!container) return;
 
-            if (hqLevel === 0) {
+            // ① 本社がない時の表示
+            if (!window.playerHQ) {
                 container.innerHTML = `
-                    <h2>🏢 本社・人事・商品開発</h2>
-                    <div class="card" style="text-align: center; padding: 60px 20px; max-width: 600px; margin: 0 auto;">
-                        <div style="font-size: 64px; margin-bottom: 20px;">🏢</div>
-                        <h3 style="margin-top: 0; font-size:24px; color:#0f172a;">グローバル本社の設立</h3>
-                        <p style="color: var(--mut); line-height:1.6; margin-bottom:30px;">役員の雇用、品質改善、R&Dを行うには、<br>マップ上のビルを取得・または賃貸して本社を構える必要があります。</p>
-                        <button class="btn-primary btn-large" style="max-width: 300px; margin: 0 auto;" onclick="openHQRelocateModal()">本社用のビルを探す</button>
-                    </div>`;
-            } else {
-                let baseCost = [1000000, 3000000, 6000000, 10000000, 20000000][hqLevel - 1] || 1000000;
-                let hqLoc = playerHQ ? `${playerHQ.regionName} - ${playerHQ.distName}` : "未設定";
-
-                let execListHtml = hiredExecs.map(e => `
-                    <div class="card" style="margin:0; border-top: 4px solid var(--gr); display:flex; flex-direction:column;">
-                        <div style="font-size: 32px; text-align:center; margin-bottom:10px;">${e.icon}</div>
-                        <div style="font-weight:900; color:var(--bl); text-align:center; font-size:16px;">${e.role}</div>
-                        <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${e.name} (Lv${e.level})</div>
-                        <div style="color:var(--gr); font-weight:bold; font-size:12px; text-align:center; margin-bottom:15px; background:#ecfdf5; padding:5px; border-radius:4px;">✨ 恩恵発動中</div>
-                        <div style="font-size:11px; text-align:center; margin-bottom:15px; color:var(--mut); flex:1;">${e.desc}</div>
-                        <button class="btn-outline danger-text" style="width:100%; border-color:#fecaca;" onclick="fireExec('${e.id}')">解雇する</button>
-                    </div>`).join('');
-
-                execListHtml += execPool.map(e => `
-                    <div class="card" style="margin:0; display:flex; flex-direction:column; background:#f8fafc;">
-                        <div style="font-size: 32px; text-align:center; margin-bottom:10px; filter:grayscale(100%); opacity:0.5;">${e.icon}</div>
-                        <div style="font-weight:900; color:#475569; text-align:center; font-size:16px;">${e.role}候補</div>
-                        <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${e.name} (Lv${e.level})</div>
-                        <div style="font-size:11px; text-align:center; margin-bottom:15px; color:var(--mut); flex:1;">${e.desc}</div>
-                        <div style="font-size:11px; margin-bottom:15px; text-align:center; background:#fff; border:1px solid #e2e8f0; padding:8px; border-radius:4px;">契約金: ¥${(e.signCost / 10000).toLocaleString()}万<br>給与: ¥${(e.salary / 10000).toLocaleString()}万/週</div>
-                        <button class="btn-primary" style="width:100%;" onclick="hireExec('${e.id}')">雇用する</button>
-                    </div>`).join('');
-
-                container.innerHTML = `
-                    <h2>🏢 本社・人事・商品開発</h2>
-                    <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); flex-wrap:wrap; gap:15px;">
-                        <div>
-                            <div style="display:flex; align-items:center; gap:12px; margin-bottom: 10px;"><span style="background: var(--gold); color: white; padding: 4px 12px; border-radius: 15px; font-weight: 900; font-size: 14px;">Level ${hqLevel}</span><span style="font-size: 24px; font-weight: 900; letter-spacing:1px;">Global Headquarters</span></div>
-                            <div style="font-size: 13px; color: #94a3b8; display:flex; gap:15px; flex-wrap:wrap;">
-                                <span>📍 所在地: <b style="color:#fff;">${hqLoc}</b></span>
-                                <span>💸 維持費: ${(baseCost / 10000).toLocaleString()}万円/週</span>
-                                <span>👔 雇用枠: ${hiredExecs.length} / ${hqLevel} 人</span>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn-outline" style="background:#fff; color:#1e293b; border:none; padding:12px 20px; font-weight:bold;" onclick="openHQRelocateModal()">🏢 本社移転</button>
-                            <button class="btn-gold" style="padding: 12px 20px; font-weight:bold;" onclick="upgradeHQ()">⭐ 設備拡張 (レベルアップ)</button>
-                        </div>
-                    </div>
-                    <div class="grid-2" style="margin-bottom:30px;">
-                        <div class="card" style="margin:0; border-top: 4px solid var(--gold);">
-                            <h3 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">☕ 商品開発 (ブランド力・品質)</h3>
-                            <p style="font-size:12px; color:#64748b;">品質を改善すると、すべての店舗の「客単価（売上）」が上昇します。</p>
-                            <div style="text-align: center; margin: 20px 0; background:#fffbeb; padding:20px; border-radius:8px; border:1px dashed #fcd34d;">
-                                <div style="font-size: 36px; font-weight: 900; color: var(--gold); margin-bottom:10px;">Lv. ${coffeeQuality}</div>
-                                <div style="width: 100%; background-color: #fef3c7; border-radius: 8px; overflow: hidden; height: 16px; margin: 10px 0;"><div style="height: 100%; background-color: var(--gold); width: ${Math.min(100, coffeeQuality * 10)}%; transition: width 0.5s;"></div></div>
-                                <div style="font-size: 15px; font-weight: bold; color: #d97706;">全店舗 売上ボーナス: +${(coffeeQuality - 1) * 8}%</div>
-                            </div>
-                            <button class="btn-primary btn-large" style="background:var(--gold); box-shadow:0 4px 10px rgba(245,158,11,0.3); margin:0;" onclick="upgradeCoffee()">研究開発を実行 (費用: ¥1,000万)</button>
-                        </div>
-                        <div class="card" style="margin:0; border-top: 4px solid var(--bl);">
-                            <h3 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">🚀 マーケティング ＆ R&D</h3>
-                            <p style="font-size:12px; color:#64748b;">テクノロジーと広告で集客力を爆発的に高めます。</p>
-                            <div style="display: flex; flex-direction: column; gap: 15px; margin-top:15px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
-                                    <div><b style="font-size:15px;">📱 自社アプリ開発</b><br><span style="font-size:11px; color:var(--mut); font-weight:bold;">集客力+15% (永続)</span></div>
-                                    <div id="ui-tech-app">${techApp ? '<span class="success-text">✅ 導入済</span>' : '<button class="btn-outline" style="background:#fff;" onclick="buyTech(\'app\', 20000000)">開発(2,000万)</button>'}</div>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
-                                    <div><b style="font-size:15px;">⚙️ 高性能自家焙煎機</b><br><span style="font-size:11px; color:var(--mut); font-weight:bold;">利益率+20% (永続)</span></div>
-                                    <div id="ui-tech-roast">${techRoaster ? '<span class="success-text">✅ 導入済</span>' : '<button class="btn-outline" style="background:#fff;" onclick="buyTech(\'roaster\', 30000000)">導入(3,000万)</button>'}</div>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; background:#eff6ff; padding:12px; border-radius:6px; border:1px solid #bfdbfe;">
-                                    <div><b style="font-size:15px; color:#1e3a8a;">🌍 グローバル広告</b><br><span style="font-size:11px; color:var(--bl); font-weight:bold;">集客力+30% (維持300万/週)</span></div>
-                                    <div><button id="btn-toggle-mkt" class="${techMarketing ? 'btn-danger' : 'btn-primary'}" onclick="toggleMarketing()">${techMarketing ? '広告停止' : '広告開始'}</button></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <h3 style="margin-top: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">👔 役員人事 (強力なパッシブ効果)</h3>
-                    <div class="grid-4" id="exec-list">${execListHtml}</div>
-                `;
+            <h2>🏢 本社・人事・商品開発</h2>
+            <div class="card" style="text-align: center; padding: 60px 20px; max-width: 600px; margin: 0 auto;">
+                <div style="font-size: 64px; margin-bottom: 20px;">🏢</div>
+                <h3 style="margin-top: 0; font-size:24px; color:#0f172a;">グローバル本社の設立</h3>
+                <p style="color: var(--mut); line-height:1.6; margin-bottom:30px;">役員の雇用、品質改善、R&Dを行うには、<br>マップ上のビルを取得・または賃貸して本社を構える必要があります。</p>
+                <button class="btn-primary btn-large" style="max-width: 300px; margin: 0 auto;" onclick="openHQRelocateModal()">本社用のビルを探す</button>
+            </div>
+        `;
+                return;
             }
-        };
 
+            // ② 本社がある時の表示（ここから管理画面）
+            // 🌟 超強力なお守り：データが空でもエラーで止まらないようにする
+            window.hqLevel = window.hqLevel || 1;
+            window.coffeeQuality = window.coffeeQuality || 1;
+            let safeHiredExecs = window.hiredExecs || [];
+            let safeExecPool = window.execPool || [];
+            let safeTechApp = window.techApp || false;
+            let safeTechRoaster = window.techRoaster || false;
+            let safeTechMarketing = window.techMarketing || false;
+
+            let baseCost = [1000000, 3000000, 6000000, 10000000, 20000000][window.hqLevel - 1] || 1000000;
+            let hqLoc = `${window.playerHQ.regionName} - ${window.playerHQ.distName}`;
+
+            let execListHtml = safeHiredExecs.map(e => `
+        <div class="card" style="margin:0; border-top: 4px solid var(--gr); display:flex; flex-direction:column;">
+            <div style="font-size: 32px; text-align:center; margin-bottom:10px;">${e.icon}</div>
+            <div style="font-weight:900; color:var(--bl); text-align:center; font-size:16px;">${e.role}</div>
+            <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${e.name} (Lv${e.level})</div>
+            <button class="btn-outline danger-text" style="width:100%; border-color:#fecaca;" onclick="fireExec('${e.id}')">解雇する</button>
+        </div>`).join('');
+
+            execListHtml += safeExecPool.map(e => `
+        <div class="card" style="margin:0; display:flex; flex-direction:column; background:#f8fafc;">
+            <div style="font-size: 32px; text-align:center; margin-bottom:10px; filter:grayscale(100%); opacity:0.5;">${e.icon}</div>
+            <div style="font-weight:900; color:#475569; text-align:center; font-size:16px;">${e.role}候補</div>
+            <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${e.name} (Lv${e.level})</div>
+            <div style="font-size:11px; margin-bottom:15px; text-align:center; background:#fff; border:1px solid #e2e8f0; padding:8px; border-radius:4px;">契約金: ¥${(e.signCost / 10000).toLocaleString()}万</div>
+            <button class="btn-primary" style="width:100%;" onclick="hireExec('${e.id}')">雇用する</button>
+        </div>`).join('');
+
+            container.innerHTML = `
+        <h2>🏢 本社・人事・商品開発</h2>
+        <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); flex-wrap:wrap; gap:15px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom: 10px;">
+                    <span style="background: var(--gold); color: white; padding: 4px 12px; border-radius: 15px; font-weight: 900; font-size: 14px;">Level ${window.hqLevel}</span>
+                    <span style="font-size: 24px; font-weight: 900; letter-spacing:1px;">Global Headquarters</span>
+                </div>
+                <div style="font-size: 13px; color: #94a3b8; display:flex; gap:15px; flex-wrap:wrap;">
+                    <span>📍 所在地: <b style="color:#fff;">${hqLoc}</b></span>
+                    <span>💸 維持費: ${(baseCost / 10000).toLocaleString()}万円/週</span>
+                    <span>👔 雇用枠: ${safeHiredExecs.length} / ${window.hqLevel} 人</span>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="btn-outline" style="background:#fff; color:#1e293b; border:none; padding:12px 20px; font-weight:bold;" onclick="openHQRelocateModal()">🏢 本社移転</button>
+                <button class="btn-primary" style="background:var(--gold); border:none; padding:12px 20px; font-weight:bold; box-shadow:0 4px 10px rgba(245,158,11,0.3);" onclick="upgradeHQ()">⭐ 設備拡張</button>
+            </div>
+            </div>
+        <div class="grid-2" style="margin-bottom:30px;">
+            <div class="card" style="margin:0; border-top: 4px solid var(--gold);">
+                <h3 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">☕ 商品開発</h3>
+                <div style="text-align: center; margin: 20px 0; background:#fffbeb; padding:20px; border-radius:8px; border:1px dashed #fcd34d;">
+                    <div style="font-size: 36px; font-weight: 900; color: var(--gold); margin-bottom:10px;">Lv. ${window.coffeeQuality}</div>
+                    <div style="font-size: 15px; font-weight: bold; color: #d97706;">売上ボーナス: +${(window.coffeeQuality - 1) * 8}%</div>
+                </div>
+                <button class="btn-primary btn-large" style="background:var(--gold); width:100%; margin:0;" onclick="upgradeCoffee()">研究開発 (¥1,000万)</button>
+            </div>
+            <div class="card" style="margin:0; border-top: 4px solid var(--bl);">
+                <h3 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">🚀 マーケティング ＆ R&D</h3>
+                <p style="font-size:12px; color:#64748b; margin-bottom: 10px; margin-top: 5px;">テクノロジーと広告で集客力と利益を爆発的に高めます。</p>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+                        <div><b style="font-size:15px;">📱 自社アプリ開発</b><br><span style="font-size:11px; color:var(--mut); font-weight:bold;">集客力+15% (永続)</span></div>
+                        <div>${safeTechApp ? '<span style="color:#059669; font-weight:bold;">✅ 導入済</span>' : '<button class="btn-outline" style="background:#fff; color:#1e293b; border:1px solid #cbd5e1; padding:8px 15px; font-weight:bold; cursor:pointer;" onclick="buyTech(\'app\', 20000000)">開発 (2,000万)</button>'}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0;">
+                        <div><b style="font-size:15px;">⚙️ 高性能自家焙煎機</b><br><span style="font-size:11px; color:var(--mut); font-weight:bold;">利益率+20% (永続)</span></div>
+                        <div>${safeTechRoaster ? '<span style="color:#059669; font-weight:bold;">✅ 導入済</span>' : '<button class="btn-outline" style="background:#fff; color:#1e293b; border:1px solid #cbd5e1; padding:8px 15px; font-weight:bold; cursor:pointer;" onclick="buyTech(\'roaster\', 30000000)">導入 (3,000万)</button>'}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#eff6ff; padding:12px; border-radius:6px; border:1px solid #bfdbfe;">
+                        <div><b style="font-size:15px; color:#1e3a8a;">🌍 グローバル広告</b><br><span style="font-size:11px; color:var(--bl); font-weight:bold;">集客力+30% (維持300万/週)</span></div>
+                        <div><button class="${safeTechMarketing ? 'btn-danger' : 'btn-primary'}" style="padding:8px 15px; font-weight:bold; border:none; cursor:pointer;" onclick="toggleMarketing()">${safeTechMarketing ? '広告停止' : '広告開始'}</button></div>
+                    </div>
+                </div>
+            </div>
+        <h3 style="margin-top: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">👔 役員人事</h3>
+        <div class="grid-4" id="exec-list">${execListHtml}</div>
+    `;
+        };
         window.openHQRelocateModal = function () {
             let modalsArea = document.getElementById('modals-area');
             let modal = document.getElementById('hq-relocate-modal');
@@ -1917,13 +1934,36 @@
             closeModal('hq-relocate-modal'); updateHQView(); updateDashboard();
         };
 
+        // === 🏢 本社の設備拡張（レベルアップ）処理 ===
         window.upgradeHQ = function () {
-            if (hqLevel === 0) return openHQRelocateModal();
-            let cost = (hqLevel + 1) * 10000000;
-            if (companies[0].cash >= cost) {
-                companies[0].cash -= cost; hqLevel++;
-                updateHQView(); updateDashboard(); addLog(`本社設備をLevel ${hqLevel}に拡張しました！(雇用枠+1)`, 'success', '自社');
-            } else { alert(`資金が足りません。${(cost / 10000).toLocaleString()}万円必要です。`); }
+            // 現在のレベルを確認
+            window.hqLevel = window.hqLevel || 1;
+
+            // 最大レベルのチェック（最大Lv5とします）
+            if (window.hqLevel >= 5) {
+                alert("本社設備はすでに最高レベルです！");
+                return;
+            }
+
+            // 次のレベルの費用を計算（Lv1→2は 2000万、Lv2→3は 3000万）
+            let cost = (window.hqLevel + 1) * 10000000;
+
+            // 💰 資金チェック（所持金は companies[0].cash ですね！）
+            if (companies[0].cash < cost) {
+                alert("資金が足りません！拡張には ¥" + (cost / 10000).toLocaleString() + "万 必要です。");
+                return;
+            }
+
+            // お金を引き落としてレベルアップ！
+            companies[0].cash -= cost;
+            window.hqLevel++;
+
+            alert("本社設備を Level " + window.hqLevel + " に拡張しました！🎉\n役員の雇用枠が増え、商品開発もさらに進められます！");
+
+            // 画面の数字を最新に更新する
+            updateHQView();
+            if (typeof updateDashboard === 'function') updateDashboard();
+            if (typeof updateUI === 'function') updateUI();
         };
         window.hireExec = function (id) {
             if (hiredExecs.length >= hqLevel) return alert("雇用枠が一杯です。本社レベルを拡張してください。");
@@ -3098,6 +3138,7 @@
                 companies.splice(subIdx, 1); renderSubsidiaryList(); updateDashboard();
             }
         };
+
         // ==========================================
         // 🚀 ゲーム起動 ＆ タイトル画面制御
         // ==========================================
