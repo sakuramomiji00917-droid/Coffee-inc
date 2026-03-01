@@ -538,23 +538,38 @@
 <body>
     <div id="start-screen"
         style="position: fixed; inset: 0; background: linear-gradient(135deg, #0f172a, #1e293b); z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff;">
-        <div style="font-size: 80px; margin-bottom: 10px;">🏢</div>
-        <h1 style="font-size: 32px; font-weight: 900; text-align: center; margin: 0 0 10px 0; letter-spacing: 2px;">
-            Global M&A Simulator</h1>
-        <h2
-            style="font-size: 18px; font-weight: bold; color: var(--gold); margin: 0 0 40px 0; border: none; padding: 0;">
-            CEO Edition</h2>
+        <div style="text-align: center; max-width: 450px; padding: 20px;">
+            <h1 style="font-size: 32px; font-weight: 900; margin: 0 0 10px 0; letter-spacing: 2px;">Global M&A Simulator
+            </h1>
+            <h2 style="font-size: 18px; font-weight: bold; color: gold; margin: 0 0 40px 0; border: none; padding: 0;">
+                CEO Edition</h2>
 
-        <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; padding: 0 20px;">
-            <button class="btn-primary"
-                style="padding: 16px; font-size: 16px; font-weight: 900; box-shadow: 0 4px 15px rgba(37,99,235,0.4);"
-                onclick="startNewGame()">▶️ 会社を設立する (NEW GAME)</button>
-            <button class="btn-outline"
-                style="padding: 16px; font-size: 16px; font-weight: bold; background: rgba(255,255,255,0.05); color: #cbd5e1; border-color: #475569;"
-                onclick="openLoadFromStart()">📂 続きから (LOAD GAME)</button>
+            <div
+                style="margin-bottom: 30px; background: rgba(255, 255, 255, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                <label for="player-company-name-input"
+                    style="display: block; margin-bottom: 12px; font-weight: bold; color: #cbd5e1; font-size: 16px;">
+                    🏢 設立する会社の名前を決めてください
+                </label>
+                <input type="text" id="player-company-name-input" placeholder="例：カケル・ホールディングス" value="My Coffee Inc."
+                    style="width: 100%; padding: 15px; border: 2px solid #475569; border-radius: 10px; font-size: 20px; text-align: center; color: #1e293b; background: #f8fafc;">
+            </div>
+
+            <div
+                style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; margin: 0 auto;">
+                <button class="btn-primary"
+                    style="padding: 18px; font-size: 18px; font-weight: 900; box-shadow: 0 4px 15px rgba(37,99,235,0.4);"
+                    onclick="startNewGame()">
+                    🚀 会社を設立する (NEW GAME)
+                </button>
+                <button class="btn-outline"
+                    style="padding: 16px; font-size: 16px; font-weight: bold; background: rgba(255,255,255,0.05); color: #cbd5e1; border: 1px solid #475569;"
+                    onclick="openLoadFromStart()">
+                    💾 続きから (LOAD GAME)
+                </button>
+            </div>
+
+            <div style="margin-top: 30px; font-size: 12px; color: #64748b; font-weight: bold;">M&A Sim</div>
         </div>
-        <div style="position: absolute; bottom: 30px; font-size: 12px; color: #64748b; font-weight: bold;">© 2026 Global
-            M&A Sim</div>
     </div>
     <div class="sidebar">
         <div class="sidebar-header">Global M&A Sim</div>
@@ -3036,11 +3051,17 @@
         };
 
         window.subActionRebrand = function (subId) {
+            let pName = companies[0].name; // 🌟 今の自分の社名を取得
             let sub = companies.find(c => c.id === subId);
-            if (confirm(`【ブランド統合】\n子会社の看板を自社（My Coffee Inc.）に付け替えます。`)) {
-                sub.name = `[直営・統合] ${sub.name.replace(/\[.*?\]\s*/, '')}`;
-                sub.stores.forEach(s => { s.name = s.name.replace(/\[.*?\]/, '[自社直営]'); });
-                addLog(`【支配】${sub.name} のブランド統合を完了。`, 'success', 'M&A');
+
+            // 確認ダイアログにも自分の名前が出るようにする
+            if (confirm(`【ブランド統合】\n子会社の看板を自社（${pName}）に付け替えます。売上が向上しますが、維持費がかかります。`)) {
+                // 🌟 [カケル・ホールディングス統合] のような名前に書き換える
+                sub.name = `[${pName}統合] ${sub.name.replace(/\[.*?\]\s*/, '')}`;
+                sub.stores.forEach(s => {
+                    s.name = s.name.replace(/\[.*?\]/, `[${pName}直営]`);
+                });
+                addLog(`【支配】${sub.name} のブランド統合が完了しました。`, 'success', 'M&A');
                 renderSubsidiaryList();
             }
         };
@@ -3085,7 +3106,21 @@
         };
 
         window.startNewGame = function () {
-            // NEW GAMEを押したら、フェードアウトして裏側の世界を見せる
+            // 🌟 1. 入力された名前を取得する
+            let inputName = document.getElementById('player-company-name-input').value;
+
+            // 🌟 2. もし名前が入っていたら、プレイヤーの会社（companies[0]）を更新する
+            if (inputName && inputName.trim() !== "") {
+                companies[0].name = inputName;
+
+                // ニュースの履歴をリセットして、新しい社名で設立ニュースを流す
+                window.logHistory = [];
+                addLog(`${inputName} を設立しました。M&Aや店舗拡大で世界一を目指しましょう！`, "normal", "自社");
+
+                updateDashboard(); // 画面上の社名表示を更新
+            }
+
+            // フェードアウトしてゲーム開始
             let screen = document.getElementById('start-screen');
             screen.style.animation = 'fadeOut 0.5s ease-out forwards';
             setTimeout(() => { screen.style.display = 'none'; }, 500);
@@ -3100,6 +3135,3 @@
 </body>
 
 </html>
-
-
-
