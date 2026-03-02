@@ -1369,6 +1369,7 @@
                     </div>
                     <div style="font-size: 12px; color: #475569; line-height: 1.6; margin-bottom: 12px;">
                         ☕ <b>珈琲枠:</b> <span style="color:${coffeeColor}; font-weight:bold; font-size:13px;">${tenantName}</span> (家賃: ¥${prop.rent.toLocaleString()}/週)<br>
+                        🚶 <b>通行量(ベース客数):</b> 約 <span style="color:#0f172a; font-weight:bold;">${prop.traffic.toLocaleString()}</span> 人/週<br>
                         📊 <b>資産価値:</b> ¥${Math.floor(currentVal / 10000).toLocaleString()}万<br>
                         👥 <b>オフィス枠:</b> ${prop.occupiedNPCSlots} / ${prop.npcSlots} 社入居
                         ${tenantNamesHTML}
@@ -2848,6 +2849,65 @@
                         }
                     }
                 }
+                // 👇👇👇 【AIの超・経営戦略（本業出店 ＆ 子会社支配の合体版）】 👇👇👇
+                if (c.id !== 'player' && !c.isBankrupt) {
+
+                    // 共通機能：世界中の空き物件を探してランダムに1つ選ぶ
+                    const findEmptyProp = () => {
+                        let props = [];
+                        Object.keys(globalNetworkData).forEach(rk => {
+                            globalNetworkData[rk].districts.forEach(dist => {
+                                dist.properties.forEach((prop, idx) => {
+                                    if (prop.coffeeTenant === null) props.push({ rk, distName: dist.name, prop, idx });
+                                });
+                            });
+                        });
+                        return props.length > 0 ? props[Math.floor(Math.random() * props.length)] : null;
+                    };
+
+                    // ① 本業の出店ラッシュ（自身がコーヒーチェーンの場合）
+                    if (c.sector === 'coffee' && c.cash > 15000000 && Math.random() < 0.40) {
+                        let target = findEmptyProp();
+                        if (target) {
+                            let cost = target.prop.rent * 4;
+                            if (c.cash - cost > 10000000) {
+                                c.cash -= cost;
+                                target.prop.coffeeTenant = 2; // ライバル枠
+                                c.stores.push(new Store(`[${target.distName}] ${target.prop.type}`, target.prop.rent, target.prop.traffic, target.prop.owner, target.prop.id, target.rk, target.distName, target.idx));
+                                if (Math.random() < 0.10) addLog(`【業界動向】ライバルの ${c.name.replace(/\[.*?\]\s*/, '')} が ${target.distName} に出店し、猛烈な勢いで拡大中です！`, 'normal', '店舗');
+                            }
+                        }
+                    }
+
+                    // ② 子会社支配（悪徳資金吸い上げ ＆ 出店命令）
+                    if (c.isPublic) {
+                        let mySubs = companies.filter(sub => sub.parent === c.id);
+                        mySubs.forEach(sub => {
+                            // 💀 資金の吸い上げ（10%の確率で子会社の現金を半分奪う）
+                            if (sub.cash > 10000000 && Math.random() < 0.10) {
+                                let siphonAmount = Math.floor(sub.cash * 0.5);
+                                sub.cash -= siphonAmount;
+                                c.cash += siphonAmount;
+                                addLog(`【業界の噂】${c.name.replace(/\[.*?\]\s*/, '')} が、傘下の ${sub.name.replace(/\[.*?\]\s*/, '')} から ¥${(siphonAmount / 10000).toLocaleString()}万 を強制回収した模様。`, 'normal', 'M&A');
+                            }
+
+                            // ☕ 子会社への出店命令（資金がある子会社に無理やり出店させる）
+                            if (sub.sector === 'coffee' && sub.cash > 30000000 && Math.random() < 0.20) {
+                                let target = findEmptyProp();
+                                if (target) {
+                                    let cost = target.prop.rent * 4;
+                                    if (sub.cash >= cost) {
+                                        sub.cash -= cost;
+                                        target.prop.coffeeTenant = 2;
+                                        sub.stores.push(new Store(`[${target.distName}] ${target.prop.type}`, target.prop.rent, target.prop.traffic, target.prop.owner, target.prop.id, target.rk, target.distName, target.idx));
+                                        addLog(`【AI戦略】${c.name.replace(/\[.*?\]\s*/, '')} の指示により、傘下の ${sub.name.replace(/\[.*?\]\s*/, '')} が ${target.distName} に新規出店！`, 'alert', '店舗');
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                // 👆👆👆 【追加ここまで】 👆👆👆
                 c.stockPrice = Math.max(10, Math.floor(c.stockPrice * (1.0 + trend + (prof > 0 ? 0.015 : -0.015))));
             });
 
@@ -3299,4 +3359,5 @@
 </body>
 
 </html>
+
 
