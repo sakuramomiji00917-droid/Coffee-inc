@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Global M&A Simulator - CEO Edition</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
     <style>
         /* =========================================
            🎨 全体スタイル・配色設定
@@ -982,8 +982,8 @@
                 document.getElementById('market-alert-target').style.background = color;
                 document.getElementById('market-alert-msg').innerHTML = msg; // ★タグ対応(innerHTML)
                 modal.style.display = 'flex';
-            }
-        };
+            };
+        }; // 👈 これを追加！！！（updateMarket関数を閉じる）
 
         // ==========================================
         // 💾 セーブ ＆ ロード機能
@@ -2064,18 +2064,64 @@
                 <div style="background:#fff; border-radius:8px; border:1px solid #e2e8f0; overflow-x:auto;">${listHtml}</div>
             `;
 
+            // グラフのインスタンスを保存する場所を準備
+            window.miniChartInstances = window.miniChartInstances || {};
+
             tCos.forEach(c => {
                 setTimeout(() => {
-                    let cvs = document.getElementById(`mini-chart-${c.id}`); if (!cvs) return;
-                    let ctx = cvs.getContext('2d'); let data = stockHistory.datasets[c.id] || [c.stockPrice];
-                    let color = c.id === 'player' ? '#3b82f6' : (data.length > 1 && data[data.length - 1] >= data[0] ? '#10b981' : '#ef4444');
-                    let gradient = ctx.createLinearGradient(0, 0, 0, 70); gradient.addColorStop(0, color + '40'); gradient.addColorStop(1, color + '00');
-                    if (window.chartInstances && window.chartInstances[c.id]) window.chartInstances[c.id].destroy();
-                    if (!window.chartInstances) window.chartInstances = {};
-                    window.chartInstances[c.id] = new Chart(ctx, { type: 'line', data: { labels: stockHistory.labels.slice(-15), datasets: [{ data: data.slice(-15), borderColor: color, backgroundColor: gradient, fill: true, borderWidth: 2, pointRadius: 0, tension: 0.3 }] }, options: { animation: false, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, layout: { padding: 0 } } });
+                    let cvs = document.getElementById(`mini-chart-${c.id}`);
+                    // Chart.jsが読み込まれていない、またはキャンバスがない場合は何もしない
+                    if (!cvs || typeof Chart === 'undefined') return;
+
+                    // ✅ 重要：古いグラフが残っていたら、エラー防止のために破棄する
+                    if (window.miniChartInstances[c.id]) {
+                        window.miniChartInstances[c.id].destroy();
+                    }
+
+                    let ctx = cvs.getContext('2d');
+
+                    // データの安全な取得
+                    let data = (window.stockHistory && window.stockHistory.datasets && window.stockHistory.datasets[c.id])
+                        ? window.stockHistory.datasets[c.id]
+                        : [c.stockPrice * 0.95, c.stockPrice * 0.98, c.stockPrice];
+
+                    // ✅ 新しいグラフを作成し、インスタンスを保存する
+                    window.miniChartInstances[c.id] = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.map((_, i) => i),
+                            datasets: [{
+                                data: data.slice(-15),
+                                borderColor: '#10b981',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    enabled: true,
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        label: function (context) {
+                                            return '¥' + context.raw.toLocaleString();
+                                        }
+                                    }
+                                }
+                            },
+                            scales: { x: { display: false }, y: { display: false } }
+                        }
+                    });
                 }, 10);
             });
-        };
+        }
 
         window.showRankingModal = function () {
             let modalsArea = document.getElementById('modals-area');
@@ -2596,6 +2642,8 @@
 
                             let newCo = new Company(vc.id, `[新規公開] ${vc.name}`, 'vc', Math.floor(finalVal), vc.sector, initPrice, true, newShares);
                             newCo.shareholders = newShareholders; newCo.playerTotalCost = myInv;
+                            // 👇 追加：上場ベンチャーは利益の15%〜35%を配当に回すようにする
+                            newCo.dividendRate = 15 + Math.floor(Math.random() * 20);
                             companies.push(newCo);
 
                             if (stockHistory && stockHistory.labels) stockHistory.datasets[vc.id] = Array(stockHistory.labels.length).fill(initPrice);
@@ -2666,7 +2714,8 @@
                 if (c.isBankrupt) return;
                 let prof = 0; // その会社の今週の営業利益
 
-                if (c.sector === 'coffee' || c.sector === 'food') {
+                // ✅ 「プレイヤー」と「AIライバル」だけ店舗から利益を計算し、実在企業は時価総額から自動計算させる
+                if (c.type === 'player' || c.type === 'ai') {
                     c.stores.forEach(s => {
                         let finalTraffic = s.contestedTraffic || s.traffic;
                         let rent = s.rent;
@@ -2949,7 +2998,8 @@
                                 <span>最終純利益</span><span id="modal-profit">¥0</span>
                             </div>
                             <div id="modal-profit-comparison" style="text-align:right; font-size: 14px; margin-bottom:20px;"></div>
-                            <button class="btn-primary btn-large" style="width:100%; font-weight:bold;" onclick="closeModal('summary-modal'); updateDashboard();">確認</button>
+<div style="width: 100%; height: 150px; margin-bottom: 20px;"><canvas id="stockChart"></canvas></div>
+<button class="btn-primary btn-large" style="width:100%; font-weight:bold;" onclick="closeModal('summary-modal'); updateDashboard();">確認</button>
                         </div>
                     </div>
                 `);
@@ -2961,7 +3011,7 @@
                 document.getElementById('modal-week').innerText = `${2020 + Math.floor((week - 2) / 48)}年 ${Math.floor(((week - 2) % 48) / 4) + 1}月 ${((week - 2) % 4) + 1}週`;
 
                 // 各項目に数字を流し込む
-                document.getElementById('modal-store-profit').innerText = `¥${(pRev - pExp).toLocaleString()}`;
+                document.getElementById('modal-store-profit').innerText = '¥' + pRev.toLocaleString();
                 document.getElementById('modal-store-exp').innerText = `-¥${pExp.toLocaleString()}`;
                 document.getElementById('modal-prop-income').innerText = `+¥${pPropInc.toLocaleString()}`;
                 document.getElementById('modal-dividend').innerText = `+¥${pDiv.toLocaleString()}`;
@@ -2971,6 +3021,7 @@
                 document.getElementById('modal-siphon-profit').innerText = `+¥${Math.floor(window.weeklySiphonedCash || 0).toLocaleString()}`;
 
                 // 税引前利益の計算
+                // ✅ (pRev - pExp) に書き換えて、経費を引き算するようにします
                 let preTax = (pRev - pExp) + pDiv + pPropInc + (window.weeklyStockSaleProfit || 0) + (window.weeklySiphonedCash || 0);
                 document.getElementById('modal-pre-tax').innerText = `¥${preTax.toLocaleString()}`;
                 document.getElementById('modal-tax').innerText = `-¥${pTax.toLocaleString()}`;
@@ -2987,6 +3038,16 @@
                 window.weeklyStockSaleProfit = 0;
                 window.weeklySiphonedCash = 0;
                 summaryModal.style.display = 'flex';
+                // ✅ グラフのデータを更新する処理
+                // ✅ グラフのデータを更新する処理
+                // 1. まず自社の株価履歴に、最新の株価データを追加する
+                window.stockPriceHistory = window.stockPriceHistory || [companies[0].stockPrice];
+                window.stockPriceHistory.push(companies[0].stockPrice);
+
+                // 2. データが揃った「あと」で、グラフを描画する
+                if (typeof updateCharts === 'function') {
+                    updateCharts();
+                }
             }
 
             // --- 10. データのクリーンアップとレポート ---
@@ -3004,10 +3065,42 @@
             if (week > 1 && (week - 1) % 12 === 0) {
                 companies.forEach(c => {
                     c.prevQProfit = c.lastQProfit || 0; // 前回の利益を保存
-                    c.lastQProfit = c.qNet || 0;       // 今回の利益を保存
-                    c.qNet = 0;                        // 次の3ヶ月のためにリセット
+                    c.lastQProfit = c.qNet || 0;        // 今回の利益を保存
+                    c.qNet = 0;                         // 次の3ヶ月のためにリセット
+
+                    // 👇 追加：利益が出ていれば配当金を計算して配る処理
+                    if (c.lastQProfit > 0 && c.dividendRate > 0) {
+                        // 総配当金 = 四半期純利益 × 配当性向(%)
+                        let totalDiv = Math.floor(c.lastQProfit * (c.dividendRate / 100));
+                        // 1株あたりの配当金
+                        c.lastDividendPerShare = Math.floor(totalDiv / c.shares);
+
+                        // もし1株あたり配当が1円以上なら、株主に現金を配る
+                        if (c.lastDividendPerShare > 0) {
+                            for (let invId in c.shareholders) {
+                                let sharesOwned = c.shareholders[invId];
+                                if (sharesOwned > 0) {
+                                    let payout = sharesOwned * c.lastDividendPerShare;
+                                    if (invId === 'player') {
+                                        companies[0].cash += payout; // プレイヤーの財布に入れる
+                                        playerTotalDividends += payout; // 累計額に足す
+                                        addLog(`【配当金】${c.name.replace(/\[.*?\]\s*/, '')} から配当金 ¥${payout.toLocaleString()} を受け取りました！`, 'success', '自社');
+                                    } else {
+                                        let invCo = companies.find(x => x.id === invId);
+                                        if (invCo) invCo.cash += payout; // NPC企業の財布に入れる
+                                    }
+                                }
+                            }
+                            c.cash -= (c.lastDividendPerShare * c.shares); // 企業のお金から総配当金を引く
+                        } else {
+                            c.lastDividendPerShare = 0;
+                        }
+                    } else {
+                        c.lastDividendPerShare = 0; // 赤字、または配当性向0%の場合はゼロ
+                    }
                 });
-                // 週間決算モーダルの後に少し遅れて表示させる
+
+                // 週間決算モーダルの後に少し遅れて特別号を表示させる
                 setTimeout(() => {
                     if (typeof showQuarterlyReport === 'function') {
                         showQuarterlyReport(1);
@@ -3172,7 +3265,38 @@
             document.getElementById('start-screen').style.display = 'none';
             openSaveLoadModal('load');
         };
+        // 👇 👇 👇 ここに貼り付けます 👇 👇 👇
+        window.updateCharts = function () {
+            const ctx = document.getElementById('stockChart');
+            if (!ctx || typeof Chart === 'undefined') return;
+
+            if (window.myChart) {
+                window.myChart.destroy();
+            }
+
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: window.stockPriceHistory.map((_, i) => i + "週"),
+                    datasets: [{
+                        label: '自社 株価推移',
+                        data: window.stockPriceHistory,
+                        borderColor: '#2563eb', // 青色
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        };
     </script>
 </body>
 
 </html>
+
